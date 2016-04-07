@@ -26,7 +26,7 @@ def downloadfile(ftpfolder,filename):
 # Write function to find subfolder on the fly
 # Get cik or company name on the fly and match to cik
 def ciklookup(ticker):
-    if ticker = 'intc':
+    if ticker == 'intc':
         cik_internal = '50863'
     return cik_internal
  
