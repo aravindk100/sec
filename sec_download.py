@@ -6,12 +6,17 @@
 #seccrawler.filing_10K('AAPL','0000320193','200010101','10')
 import requests
 import re
+import datetime
+import logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levlename)s - %(message)s')
 from bs4 import BeautifulSoup
 
 def downloadfile(ftpfolder,filename):
     from ftplib import FTP
     ftp = FTP('ftp.sec.gov')
     ftp.login()
+    print 'this is a test message',ftpfolder
+    logging.info ('This is a test message'),ftpfolder
     ftp.cwd(ftpfolder)
     ##TODO : Generate folder structure based on company form type and append to local file name form name and year qtr..
     localfile = open('intel.xls','wb')
@@ -26,8 +31,8 @@ def downloadfile(ftpfolder,filename):
     ftp.quit()
 
 # TODO
-# Write function to find subfolder on the fly
-# Get cik or company name on the fly and match to cik
+# Write function to find subfolder on the fly..Done
+# Get cik or company name on the fly and match to cik ..DONE
 
 # Extract ftp folder path/cik everything straigh from the search results and extracting from the table for results....
 # https://www.sec.gov/cgi-bin/browse-edgar?CIK=intc&owner=exclude&action=getcompany&Find=Search
@@ -40,40 +45,29 @@ def folderlookup(ticker,formtype,date,count):
         page1 = requests.get(newurl)
     except:
         print "unable to retrieve URL. URL or server error"
-    soup = BeautifulSoup(page1.text,"html.parser")
-    #print soup.prettify()[0:1000]
-    tables = soup.find("table", summary="Results")
-    #th = tables.find_all('th', text='Filings')
-    for row in tables.find_all("tr"):
-        #print row
-        #cells = row.find_all("td")
-        for cells in row.find_all("td"):
-            print cells
-            print type(cells)
-            print len(cells)
-            # filingtype = cells[0].find(text=True)
-            # format =  cells[1].find(text = True)
-            # descrip = cells[2].find(text=True)
-             # filedate = cells[3].find(text=True)
-             # print filedate
-                      
-    print type(soup)
-    print type(tables)
-    #print filedate
-    #print tables
-    
-
-    return newurl
+    soup = BeautifulSoup(page1.text,"lxml") #trying lxml as per bs recommendation
+    tables = soup.find('table',summary='Results')
+    tr = tables.find_all('tr')
+    ftp_path = []
+    filedate = []
+    formtype = []
+    for tr in tables.find_all('tr'):
+        td = tr.find_all('td')
+        if td: # checking so we can skip first header row..
+            formtype.append(td[0].text)
+            raw_loc =  td[1].a["href"]   ## beautiful soup returns a list and we need to access the individual elements of the list so we can operate on them using bs objects such as.string etc.
+            extract_loc = re.findall('/edgar/data(/[0-9]+/[0-9]+)',raw_loc) #extracting the path usign regular expressino from second element.. this will return a list and need to extract..
+            if extract_loc: #only if the regular expression is a match
+                ftp_path.append(extract_loc[0]) # then append to path
+            filedate.append(td[3].text)
+    return formtype,filedate,ftp_path
 
 def ciklookup(ticker):
-
     URL = 'https://www.sec.gov/cgi-bin/browse-edgar?CIK='+ticker+'&owner=exclude&action=getcompany&Find=Search'
     page = requests.get(URL)
     ciks = re.findall('CIK=([0-9]+)',page.text)
     cik_internal = ciks[0]   # getting all the cik using findall can be  cut short to stop at first if needed
     return cik_internal
- 
-
 
 def generate_ftp_folder(): #creating the path to travers sec.gov ftp site using the index
     folder = '000005086315000072' ## TODO make this generic next
@@ -84,14 +78,21 @@ def stripzero(cikzero): # removes the leading zero from CIK for the purpose of n
     cik_int = re.findall('([1-9][0-9]+)',cikzero)
     return str(cik_int[0])
 
-ticker = raw_input('Enter the Stock ticker')
-onecik = ciklookup(ticker)
-print onecik
-form = '10-q'
-priortodate = '20010101'
+ticker = raw_input('Enter the Stock ticker:')
+form = raw_input('Enter Form  Type eg. 10-q /10-k...:')
+today = datetime.date.today()
+todaysdate = str(today.year)+str(today.month)+str(today.day) #converting to str and then concatenating
+priortodate = todaysdate
 totalcount = '100'
-folderpath = folderlookup(ticker,form,priortodate,totalcount)
-print "folderpath"
+form,dates,path = folderlookup(ticker,form,priortodate,totalcount)
+
+filename = 'Financial_Report.xlsx'
+print '----------------------------------'
+onecik = ciklookup(ticker)
+cik = stripzero(onecik)
+for i in range(len(form)):
+    print form[i],dates[i],path[i]
+    downloadfile(str(path[i]),filename)
 
 #onecik = ciklookup(ticker)
 #cik = stripzero(onecik)
@@ -99,10 +100,7 @@ print "folderpath"
 #ftpfolder = generate_ftp_folder()
 
 
-#filename = 'Financial_Report.xlsx'
-#print '----------------------------------'
-#print list
-#downloadfile(ftpfolder,filename)
+
 
 
 
