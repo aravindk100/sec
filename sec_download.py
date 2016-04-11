@@ -27,7 +27,7 @@ def downloadfile(ftpfolder,ftpfilename,localname):
         ftp.retrbinary('RETR ' + ftpfilename ,localfile.write, 1024 )
     except:
         # unable to handle this error.. program exits upon hitting file open error.. follow up !@#@!
-        print  ' File error: File may be open ? '
+        print  ' File error: File  %s does not exist in FTP path %s',ftpfilename,ftpfolder
     ##   print i
     localfile.close()
     ftp.quit()
@@ -35,6 +35,8 @@ def downloadfile(ftpfolder,ftpfilename,localname):
 # TODO
 # Write function to find subfolder on the fly..Done
 # Get cik or company name on the fly and match to cik ..DONE
+# Write a function that can retrieve all the filenames from ftp path 
+# Modify the download function so that it can download all Excel(xlsx or xls ) or text documents or all documents (you will have to do this one by one..)
 
 # Extract ftp folder path/cik everything straigh from the search results and extracting from the table for results....
 # https://www.sec.gov/cgi-bin/browse-edgar?CIK=intc&owner=exclude&action=getcompany&Find=Search
@@ -92,14 +94,11 @@ filename = 'Financial_Report.xlsx'
 print '----------------------------------'
 
 for i in range(len(form)):
-    print form[i],dates[i],path[i]
+    logger.info('%s %s %s',form[i],dates[i],path[i])
+    if form[i] == '10-K/A':
+        form[i] = '10-K_A'    # / breaks windows file naming conventions.. changing to underscore
     localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xlsx' #generating the file name to store locally 
     downloadfile(str(path[i]),filename,localfilename)
-
-#onecik = ciklookup(ticker)
-#cik = stripzero(onecik)
-#print 'CIK of ticker %s is %s' %(ticker,cik)
-#ftpfolder = generate_ftp_folder()
 
 
 
