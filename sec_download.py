@@ -8,21 +8,23 @@ import requests
 import re
 import datetime
 import logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levlename)s - %(message)s')
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 from bs4 import BeautifulSoup
 
-def downloadfile(ftpfolder,filename):
+def downloadfile(ftpfolder,ftpfilename,localname):
     from ftplib import FTP
     ftp = FTP('ftp.sec.gov')
     ftp.login()
-    print 'this is a test message',ftpfolder
-    logging.info ('This is a test message'),ftpfolder
+    logger.info ('Changing to ftp path %s',ftpfolder)
     ftp.cwd(ftpfolder)
     ##TODO : Generate folder structure based on company form type and append to local file name form name and year qtr..
-    localfile = open('intel.xls','wb')
+    localfile = open(localname,'wb')
     #list =  ftp.dir()
     try:
-        ftp.retrbinary('RETR ' + filename ,localfile.write, 1024 )
+        ftp.retrbinary('RETR ' + ftpfilename ,localfile.write, 1024 )
     except:
         # unable to handle this error.. program exits upon hitting file open error.. follow up !@#@!
         print  ' File error: File may be open ? '
@@ -84,15 +86,15 @@ today = datetime.date.today()
 todaysdate = str(today.year)+str(today.month)+str(today.day) #converting to str and then concatenating
 priortodate = todaysdate
 totalcount = '100'
-form,dates,path = folderlookup(ticker,form,priortodate,totalcount)
+form,dates,path = folderlookup(ticker,form,priortodate,totalcount)  #form type , file date, ftp navigation path
 
 filename = 'Financial_Report.xlsx'
 print '----------------------------------'
-onecik = ciklookup(ticker)
-cik = stripzero(onecik)
+
 for i in range(len(form)):
     print form[i],dates[i],path[i]
-    downloadfile(str(path[i]),filename)
+    localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xlsx' #generating the file name to store locally 
+    downloadfile(str(path[i]),filename,localfilename)
 
 #onecik = ciklookup(ticker)
 #cik = stripzero(onecik)
