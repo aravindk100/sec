@@ -8,19 +8,30 @@ import requests
 import re
 import datetime
 import logging
+import os
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 from bs4 import BeautifulSoup
 
-def downloadfile(ftpfolder,ftpfilename,localname):
+def downloadfile(ftpfolder,ftpfiletype,localname):
     from ftplib import FTP
     ftp = FTP('ftp.sec.gov')
     ftp.login()
     logger.info ('Changing to ftp path %s',ftpfolder)
     ftp.cwd(ftpfolder)
+    dirlisting = ftp.nlst()
+    ftpfilename = 'dummyname'  #for cases where there is no match
+    for file in dirlisting:
+        if ftpfiletype == 'Excel':
+            if re.findall('xls',file) or re.findall('xlsx',file):
+                ftpfilename = file
+            
+        
+       
     ##TODO : Generate folder structure based on company form type and append to local file name form name and year qtr..
+          
     localfile = open(localname,'wb')
     #list =  ftp.dir()
     try:
@@ -61,7 +72,7 @@ def folderlookup(ticker,formtype,date,count):
             formtype.append(td[0].text)
             raw_loc =  td[1].a["href"]   ## beautiful soup returns a list and we need to access the individual elements of the list so we can operate on them using bs objects such as.string etc.
             extract_loc = re.findall('/edgar/data(/[0-9]+/[0-9]+)',raw_loc) #extracting the path usign regular expressino from second element.. this will return a list and need to extract..
-            if extract_loc: #only if the regular expression is a match
+            if extract_loc: #only if the regular expression is a match #TODOOOO will have to figure out ways to take care of the cases where second ftp path is not part of the file
                 ftp_path.append(extract_loc[0]) # then append to path
             filedate.append(td[3].text)
     return formtype,filedate,ftp_path
@@ -84,20 +95,27 @@ def stripzero(cikzero): # removes the leading zero from CIK for the purpose of n
 
 ticker = raw_input('Enter the Stock ticker:')
 form = raw_input('Enter Form  Type eg. 10-q /10-k...:')
+totalcount = raw_input('Count of forms to download:')
 today = datetime.date.today()
 todaysdate = str(today.year)+str(today.month)+str(today.day) #converting to str and then concatenating
 priortodate = todaysdate
-totalcount = '100'
 form,dates,path = folderlookup(ticker,form,priortodate,totalcount)  #form type , file date, ftp navigation path
 
-filename = 'Financial_Report.xlsx'
+filename = 'Excel'
 print '----------------------------------'
 
 for i in range(len(form)):
     logger.info('%s %s %s',form[i],dates[i],path[i])
     if form[i] == '10-K/A':
         form[i] = '10-K_A'    # / breaks windows file naming conventions.. changing to underscore
-    localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xlsx' #generating the file name to store locally 
+    
+    currentpath = os.getcwd()  #getting current directory of .py script
+    newpath = currentpath + '\\Tickers\\' + ticker.upper() #planning to create new directory with ticker name in upper case
+    if not  os.path.exists(newpath): #check on if path alrerady exists
+        os.makedirs(newpath) # if path does not exist creat it...
+    
+    localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xls' #generating the file name to store locally 
+    localfilename = os.path.join(newpath,localfilename)
     downloadfile(str(path[i]),filename,localfilename)
 
 
