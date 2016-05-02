@@ -114,7 +114,7 @@ for i in range(len(form)):
     if not  os.path.exists(newpath): #check on if path alrerady exists
         os.makedirs(newpath) # if path does not exist creat it...
     
-    localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xls' #generating the file name to store locally 
+    localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xlsx' #generating the file name to store locally 
     localfilename = os.path.join(newpath,localfilename)
     downloadfile(str(path[i]),filename,localfilename)
 
