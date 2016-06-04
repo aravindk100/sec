@@ -1,17 +1,22 @@
 import pandas as pd
 import xlrd
+import dummy_thread
 import openpyxl
 import re
 import os
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 import logging
+import matplotlib.pyplot as plt
+from matplotlib.dates import date2num
+import datetime
+import time
 
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 
-class quarterlyincome(object):
+class quarterlyincome( object ):
     
     def __init__(self,innetrevenue,innetincome):
         self.netincome = innetincome
@@ -72,20 +77,48 @@ def xlparse(filepath,classname):
             
     #print netrevenue,netincome
     classname = quarterlyincome(netrevenue,netincome)    #creating a new class with income vlaues 
-    print 'Net Revenue  and Net income is',classname.netrevenue,classname.netincome
+    
+    return classname
 
-
+# Main Function
+ticker = raw_input("Enter stock ticker")
+classlist = []
+datelist = []
 # parse all files and create a class for each one of those with data
 currentpath = os.getcwd()  #getting current directory of .py script
-newpath = currentpath + '\\Tickers\\' #planning to create new directory with ticker name in upper case
+newpath = currentpath + '\\Tickers\\' + ticker.upper() #planning to create new directory with ticker name in upper case
 #if os.path.exists(newpath): #check on if path alrerady exists
 for root,dirs,files in os.walk(newpath): #walk returns  root path, directories and then the file names
     for name in files:
         #print name
         filepath = (os.path.join(root, name))
         filename =  name.rstrip('.xls') #removing the .xls extension
+        date = re.findall(('\d{4}-\d{2}-\d{2}'), filename)
+        datet = datetime.datetime.strptime(date[0], '%Y-%m-%d')
+        datelist.append(datet)
         logger.debug('%s %s',filepath,filename)
 #filepath = 'C:\Users\Aravind\Dropbox\Learning\Programming\Python\Python Fun\SEC_10k_q\AAPL_10-K_2015-10-28.xlsx'
         print filename
-        xlparse(filepath,filename)
-        
+        classfile = name.rstrip('.xls')
+        classfile = xlparse(filepath,filename)
+        classlist.append(classfile)
+        print 'Net Revenue  and Net income is',classfile.netrevenue,classfile.netincome
+
+
+#TODO understand file error with older xls files
+#expand to other rows in income sheet
+#start plotting        
+list = []
+print date2num(datelist)
+#for (date,value) in datelist:
+#    x = [date2num(datelist)]
+#    print x
+ 
+for entry in classlist:
+    list.append(entry.netincome)
+    
+for x,y in zip(datelist,list):
+    print x,y
+    
+plt.bar(datelist,list,color="red",linestyle='-',linewidth=5)
+plt.show()
