@@ -10,11 +10,37 @@ import logging
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import datetime
-import time
+import sqlite3
 
 logger = logging.getLogger()
 logger.setLevel(logging.WARNING)
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
+
+conn = sqlite3.connect('secfinance.sqlite')
+curr = conn.cursor()
+
+curr.executescript('''
+
+DROP TABLE IF EXISTS company;
+DROP TABLE IF EXISTS valuetype;
+DROP TABLE IF EXISTS summary;
+
+CREATE TABLE company (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+    name TEXT UNIQUE
+);
+
+CREATE TABLE valuetype (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+    name TEXT UNIQUE
+);
+
+CREATE TABLE summary (
+    company_id INTEGER,
+    valuetype_id INTEGER,
+    date TEXT,
+    dollaramt INTEGER)
+''')
 
 class quarterlyincome( object ):
     
