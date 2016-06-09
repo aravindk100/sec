@@ -24,6 +24,7 @@ curr.executescript('''
 DROP TABLE IF EXISTS company;
 DROP TABLE IF EXISTS valuetype;
 DROP TABLE IF EXISTS summary;
+DROP TABLE IF EXISTS dollardenomination;
 
 CREATE TABLE company (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -35,25 +36,48 @@ CREATE TABLE valuetype (
     name TEXT UNIQUE
 );
 
+CREATE TABLE dollardenomination (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+    denomination INTEGER UNIQUE);
+
 CREATE TABLE summary (
     company_id INTEGER,
     valuetype_id INTEGER,
     date TEXT,
-    dollaramt INTEGER)
+    dollaramt INTEGER,
+    dollardenomination_id INTEGER)
 ''')
 
-class quarterlyincome( object ):
-    
-    def __init__(self,innetrevenue,innetincome):
-        self.netincome = innetincome
-        self.netrevenue = innetrevenue
-        
-    def test(self):
-        print 'testing'
-        print  self.netincome
-        
+def extractandstore(namein,valuein,matchlist,tickerin,datein,doldeno):
+    for entry in matchlist:
+        print 'entry is',entry
+        if fuzz.ratio(entry, namein) > 70:
+            # TODO Add a check for blank cells
+            logger.info('%s,%s', name, fuzz.ratio(entry, name))
+            netrevenue = valuein
+            curr.execute('''INSERT OR IGNORE INTO company (name)
+                VALUES(?)''', (tickerin,))
+            curr.execute('''SELECT id FROM company WHERE name = ?''', (tickerin,))
+            company_id = curr.fetchone()[0]
+            curr.execute(''' INSERT OR IGNORE INTO valuetype (name)
+                        VALUES(?)''', ('netrevenue',))
+            curr.execute('''SELECT id FROM valuetype WHERE name = ?''', ('netrevenue',))
+            valuetype_id = curr.fetchone()[0]
+            # denomination table
+            curr.execute('''INSERT OR IGNORE INTO dollardenomination(denomination)
+                        VALUES(?)''', (doldeno,))
+            curr.execute('''SELECT id FROM dollardenomination WHERE denomination = ?''', (doldeno,))
+            dollardenomination_id = curr.fetchone()[
+                0]  # fetching first column since that is the id that can be used as refernece in main table
 
-def xlparse(filepath,classname):
+            curr.execute('''INSERT OR IGNORE INTO summary (company_id, valuetype_id, date, dollaramt, dollardenomination_id)
+            VALUES(?,?,?,?,?)''', (company_id, valuetype_id, datein, netrevenue, dollardenomination_id))
+            print 'Netrevenue is ',netrevenue
+            break
+
+
+
+def xlparse(tickerin,filepath,classname,datein):
     wb = openpyxl.load_workbook(filepath)
     sheetnames = wb.get_sheet_names() #getting list of all sheetnames
 
@@ -72,7 +96,14 @@ def xlparse(filepath,classname):
 
     sharedeno = re.findall('shares in ([a-zA-Z]+)',cola[0])
     dollardeno = re.findall('\$ in ([a-zA-Z]+)',cola[0]) #note the use of special character '\' to match for $ vs match at end of line..
-    #print sharedeno[0],dollardeno[0] #regular expression returns a list
+    if dollardeno[0] == 'Thousands':
+        doldeno = 1000
+    elif dollardeno[0] == 'Millions':
+        doldeno = 1000000
+    else:
+        logger.error('Unknown denomination for dollar value')
+
+    print sharedeno[0],dollardeno[0] #regular expression returns a list
 
 
     #netrevenue  -cost ofsales = grossmargin 
@@ -83,32 +114,56 @@ def xlparse(filepath,classname):
     #netincome/basic shares = basic earnings per share 
     #netincome/diluted shares = diluted earnings per share of commone stock
 
-    netrevenuelist = ['Net sales','Netsales','netsales','Net revenue','netrevenue'] #we will want to keep expanding this list based on how many different variants from different companies                                                               
-    netincomelist = ['Net income','netincome'] #we will want to keep expanding this list based on how many different variants from different companies         
+    netrevenuelist = ['netrevenue','Net sales','Netsales','netsales','Net revenue'] #we will want to keep expanding this list based on how many different variants from different companies
+    netincomelist = ['netincome','Net income'] #we will want to keep expanding this list based on how many different variants from different companies
 
+    listoflists = [netrevenuelist,netincomelist]
     logger.debug('%s,%s',cola,colb)
-    for name,value in zip(cola,colb): #looping through both cola and b at the same time .. maybe not efficient time wise and better to use index ??
-        for entry in netrevenuelist:
-            if fuzz.ratio(entry,name) > 70:
-                #TODO Add a check for blank cells
-                logger.info('%s,%s',name,fuzz.ratio(entry,name))
-                netrevenue = value
-                break
-        for entry in netincomelist:
-            if fuzz.ratio(entry,name) > 70:
-                #TODO Add a check for blank cells
-                logger.info('%s,%s',name,fuzz.ratio(entry,name))
-                netincome = value
-                break
-            
-    #print netrevenue,netincome
-    classname = quarterlyincome(netrevenue,netincome)    #creating a new class with income vlaues 
-    
-    return classname
+    for name, value in zip(cola,
+                           colb):  # looping through both cola and b at the same time .. maybe not efficient time wise and better to use index ?# ?
+        #extractandstore(name,value,netrevenuelist,tickerin,datein,doldeno)
+        for listentry in listoflists:
+            for entry in listentry:
+                if fuzz.ratio(entry, name) > 70:
+                    # TODO Add a check for blank cells
+                    logger.info('%s,%s', name, fuzz.ratio(entry, name))
+    #                listentry[0] = value  #first entry of listentry
+                    curr.execute('''INSERT OR IGNORE INTO company (name)
+                    VALUES(?)''', (tickerin,))
+                    curr.execute('''SELECT id FROM company WHERE name = ?''', (tickerin,))
+                    company_id = curr.fetchone()[0]
+                    curr.execute(''' INSERT OR IGNORE INTO valuetype (name)
+                                            VALUES(?)''', (listentry[0],))
+                    curr.execute('''SELECT id FROM valuetype WHERE name = ?''', (listentry[0],))
+                    valuetype_id = curr.fetchone()[0]
+                    # denomination table
+                    curr.execute('''INSERT OR IGNORE INTO dollardenomination(denomination)
+                            VALUES(?)''', (doldeno,))
+                    curr.execute('''SELECT id FROM dollardenomination WHERE denomination = ?''', (doldeno,))
+                    dollardenomination_id = curr.fetchone()[
+                        0]  # fetching first column since that is the id that can be used as refernece in main table
 
+                    curr.execute('''INSERT OR IGNORE INTO summary (company_id, valuetype_id, date, dollaramt, dollardenomination_id)
+                VALUES(?,?,?,?,?)''', (company_id, valuetype_id, datein, value, dollardenomination_id))
+
+                    break
+        #for entry in netincomelist:
+         #   if fuzz.ratio(entry, name) > 70:
+                # TODO Add a check for blank cells
+                #logger.info('%s,%s', name, fuzz.ratio(entry, name))
+                #netincome = value
+                #              curr.execute ('''INSERT OR IGNORE INTO company (name)
+                #            VALUES(?)''',(ticker,))
+                #                curr.execute (''' INSERT OR IGNORE INTO valuetype (name)
+                #                    VALUES(?)''',('netincome',))
+                #break
+    #print netrevenue, netincome, datein
+
+    conn.commit()
+
+    return
 # Main Function
 ticker = raw_input("Enter stock ticker")
-classlist = []
 datelist = []
 # parse all files and create a class for each one of those with data
 currentpath = os.getcwd()  #getting current directory of .py script
@@ -125,26 +180,23 @@ for root,dirs,files in os.walk(newpath): #walk returns  root path, directories a
         logger.debug('%s %s',filepath,filename)
 #filepath = 'C:\Users\Aravind\Dropbox\Learning\Programming\Python\Python Fun\SEC_10k_q\AAPL_10-K_2015-10-28.xlsx'
         print filename
-        classfile = name.rstrip('.xls')
-        classfile = xlparse(filepath,filename)
-        classlist.append(classfile)
-        print 'Net Revenue  and Net income is',classfile.netrevenue,classfile.netincome
+        xlparse(ticker, filepath, filename, date[0])
 
 
 #TODO understand file error with older xls files
 #expand to other rows in income sheet
-#start plotting        
-list = []
-print date2num(datelist)
-#for (date,value) in datelist:
-#    x = [date2num(datelist)]
-#    print x
- 
-for entry in classlist:
-    list.append(entry.netincome)
-    
-for x,y in zip(datelist,list):
-    print x,y
-    
-plt.bar(datelist,list,color="red",linestyle='-',linewidth=5)
-plt.show()
+#start plotting
+#list = []
+#print date2num(datelist)
+##for (date,value) in datelist:
+##    x = [date2num(datelist)]
+##    print x
+
+#for entry in classlist:
+#    list.append(entry.netincome)
+
+#for x,y in zip(datelist,list):
+#    print x,y
+
+#plt.bar(datelist,list,color="red",linestyle='-',linewidth=5)
+#plt.show()
