@@ -48,35 +48,6 @@ CREATE TABLE summary (
     dollardenomination_id INTEGER)
 ''')
 
-def extractandstore(namein,valuein,matchlist,tickerin,datein,doldeno):
-    for entry in matchlist:
-        print 'entry is',entry
-        if fuzz.ratio(entry, namein) > 70:
-            # TODO Add a check for blank cells
-            logger.info('%s,%s', name, fuzz.ratio(entry, name))
-            netrevenue = valuein
-            curr.execute('''INSERT OR IGNORE INTO company (name)
-                VALUES(?)''', (tickerin,))
-            curr.execute('''SELECT id FROM company WHERE name = ?''', (tickerin,))
-            company_id = curr.fetchone()[0]
-            curr.execute(''' INSERT OR IGNORE INTO valuetype (name)
-                        VALUES(?)''', ('netrevenue',))
-            curr.execute('''SELECT id FROM valuetype WHERE name = ?''', ('netrevenue',))
-            valuetype_id = curr.fetchone()[0]
-            # denomination table
-            curr.execute('''INSERT OR IGNORE INTO dollardenomination(denomination)
-                        VALUES(?)''', (doldeno,))
-            curr.execute('''SELECT id FROM dollardenomination WHERE denomination = ?''', (doldeno,))
-            dollardenomination_id = curr.fetchone()[
-                0]  # fetching first column since that is the id that can be used as refernece in main table
-
-            curr.execute('''INSERT OR IGNORE INTO summary (company_id, valuetype_id, date, dollaramt, dollardenomination_id)
-            VALUES(?,?,?,?,?)''', (company_id, valuetype_id, datein, netrevenue, dollardenomination_id))
-            print 'Netrevenue is ',netrevenue
-            break
-
-
-
 def xlparse(tickerin,filepath,classname,datein):
     wb = openpyxl.load_workbook(filepath)
     sheetnames = wb.get_sheet_names() #getting list of all sheetnames
@@ -127,13 +98,12 @@ def xlparse(tickerin,filepath,classname,datein):
                 if fuzz.ratio(entry, name) > 70:
                     # TODO Add a check for blank cells
                     logger.info('%s,%s', name, fuzz.ratio(entry, name))
-    #                listentry[0] = value  #first entry of listentry
                     curr.execute('''INSERT OR IGNORE INTO company (name)
                     VALUES(?)''', (tickerin,))
                     curr.execute('''SELECT id FROM company WHERE name = ?''', (tickerin,))
                     company_id = curr.fetchone()[0]
                     curr.execute(''' INSERT OR IGNORE INTO valuetype (name)
-                                            VALUES(?)''', (listentry[0],))
+                                            VALUES(?)''', (listentry[0],))  #first entry of list will have the name we will use for column type
                     curr.execute('''SELECT id FROM valuetype WHERE name = ?''', (listentry[0],))
                     valuetype_id = curr.fetchone()[0]
                     # denomination table
@@ -147,17 +117,7 @@ def xlparse(tickerin,filepath,classname,datein):
                 VALUES(?,?,?,?,?)''', (company_id, valuetype_id, datein, value, dollardenomination_id))
 
                     break
-        #for entry in netincomelist:
-         #   if fuzz.ratio(entry, name) > 70:
                 # TODO Add a check for blank cells
-                #logger.info('%s,%s', name, fuzz.ratio(entry, name))
-                #netincome = value
-                #              curr.execute ('''INSERT OR IGNORE INTO company (name)
-                #            VALUES(?)''',(ticker,))
-                #                curr.execute (''' INSERT OR IGNORE INTO valuetype (name)
-                #                    VALUES(?)''',('netincome',))
-                #break
-    #print netrevenue, netincome, datein
 
     conn.commit()
 
