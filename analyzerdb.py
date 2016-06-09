@@ -1,14 +1,8 @@
-import pandas as pd
-import xlrd
-import dummy_thread
 import openpyxl
 import re
 import os
 from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
 import logging
-import matplotlib.pyplot as plt
-from matplotlib.dates import date2num
 import datetime
 import sqlite3
 
@@ -88,7 +82,7 @@ def xlparse(tickerin,filepath,classname,datein):
     netrevenuelist = ['netrevenue','Net sales','Netsales','netsales','Net revenue'] #we will want to keep expanding this list based on how many different variants from different companies
     netincomelist = ['netincome','Net income'] #we will want to keep expanding this list based on how many different variants from different companies
 
-    listoflists = [netrevenuelist,netincomelist]
+    listoflists = [netrevenuelist,netincomelist]  #make this list as long as the number of entries we want to extract and store in db
     logger.debug('%s,%s',cola,colb)
     for name, value in zip(cola,
                            colb):  # looping through both cola and b at the same time .. maybe not efficient time wise and better to use index ?# ?
