@@ -25,14 +25,19 @@ def downloadfile(ftpfolder,ftpfiletype,localname):
     ftpfilename = 'dummyname'  #for cases where there is no match
     for file in dirlisting:
         if ftpfiletype == 'Excel':
-            if re.findall('xls',file) or re.findall('xlsx',file):
+            if re.findall('xlsx',file):
+                localext = '.xlsx'   #doing xlsx first so otherwise xls will also match for xlsx
                 ftpfilename = file
-            
+                break
+            elif re.findall('xls',file):
+                localext = '.xls'
+                ftpfilename = file
+                break
         
        
     ##TODO : Generate folder structure based on company form type and append to local file name form name and year qtr..
           
-    localfile = open(localname,'wb')
+    localfile = open(localname+localext,'wb')
     #list =  ftp.dir()
     try:
         ftp.retrbinary('RETR ' + ftpfilename ,localfile.write, 1024 )
@@ -114,7 +119,7 @@ for i in range(len(form)):
     if not  os.path.exists(newpath): #check on if path alrerady exists
         os.makedirs(newpath) # if path does not exist creat it...
     
-    localfilename = ticker+'_'+form[i]+'_'+dates[i]+'.xlsx' #generating the file name to store locally 
+    localfilename = ticker+'_'+form[i]+'_'+dates[i]   #generating the file name to store locally.. not including extension
     localfilename = os.path.join(newpath,localfilename)
     downloadfile(str(path[i]),filename,localfilename)
 

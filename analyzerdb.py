@@ -61,14 +61,19 @@ def xlparse(tickerin,filepath,classname,datein):
 
     sharedeno = re.findall('shares in ([a-zA-Z]+)',cola[0])
     dollardeno = re.findall('\$ in ([a-zA-Z]+)',cola[0]) #note the use of special character '\' to match for $ vs match at end of line..
-    if dollardeno[0] == 'Thousands':
-        doldeno = 1000
-    elif dollardeno[0] == 'Millions':
-        doldeno = 1000000
-    else:
-        logger.error('Unknown denomination for dollar value')
 
-    print sharedeno[0],dollardeno[0] #regular expression returns a list
+    doldeno = 1000000
+    #if dollardeno == None:
+     #   doldeno = 1000000
+        # if regular expression returns None assuming default of one million for  now
+    #elif dollardeno[0] == 'Thousands':
+     #   doldeno = 1000
+    #elif dollardeno[0] == 'Millions':
+     #   doldeno = 1000000
+    #else:
+     #   logger.error('Unknown denomination for dollar value')
+
+    #print sharedeno[0],dollardeno[0],doldeno #regular expression returns a list
 
 
     #netrevenue  -cost ofsales = grossmargin 
